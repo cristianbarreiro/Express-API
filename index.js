@@ -3,7 +3,10 @@ const { ApolloServer, gql, UserInputError } = require("apollo-server-express");
 const { v4: uuidv4 } = require("uuid");
 const pool = require("./db");
 
+const cors = require("cors"); // 👈 importa cors
 const app = express();
+
+app.use(cors()); // 👈 habilita CORS
 app.use(express.json());
 
 // --- REST Endpoint (ejemplo) ---
@@ -12,46 +15,24 @@ app.get("/persons", async (req, res) => {
   res.json(rows);
 });
 
-// --- GraphQL Schema ---
 const typeDefs = gql`
-  type Address {
-    street: String!
-    city: String!
-  }
-
   type Person {
     id: ID!
     name: String!
-    age: Int!
-    phone: String!
-    street: String!
-    city: String!
-    address: Address!
-    canDrink: Boolean!
+    mail: String!
+    password: String!
   }
 
   type Query {
     personCount: Int!
     allPersons: [Person!]!
     findPerson(name: String!): Person
+    login(mail: String!, password: String!): Person
   }
 
   type Mutation {
-    addPerson(
-      name: String!
-      phone: String!
-      street: String!
-      city: String!
-      age: Int!
-    ): Person
-    editPerson(
-      id: ID!
-      name: String
-      phone: String
-      street: String
-      city: String
-      age: Int
-    ): Person
+    addPerson(name: String!, mail: String!, password: String!): Person
+    editPerson(id: ID!, name: String, mail: String, password: String): Person
     deletePerson(id: ID!): Person
     deleteAllPersons: [Person!]!
   }
@@ -59,8 +40,15 @@ const typeDefs = gql`
 
 const resolvers = {
   Query: {
+    login: async (_, { mail, password }) => {
+      const [rows] = await pool.query(
+        "SELECT * FROM persons WHERE mail = ? AND password = ?",
+        [mail, password]
+      );
+      return rows[0] || null;
+    },
     personCount: async () => {
-      const [rows] = await pool.query("SELECT COUNT(*) as count FROM persons");
+      const [rows] = await pool.query("SELECT COUNT(*) AS count FROM persons");
       return rows[0].count;
     },
     allPersons: async () => {
@@ -77,23 +65,26 @@ const resolvers = {
   Mutation: {
     addPerson: async (_, args) => {
       const [existing] = await pool.query(
-        "SELECT * FROM persons WHERE name = ?",
-        [args.name]
+        "SELECT * FROM persons WHERE mail = ?",
+        [args.mail]
       );
       if (existing.length > 0) {
-        throw new UserInputError("Name must be unique", {
-          invalidArgs: args.name,
+        throw new UserInputError("Email must be unique", {
+          invalidArgs: args.mail,
         });
       }
+
       const [result] = await pool.query(
-        "INSERT INTO persons (name, age, phone, street, city) VALUES (?, ?, ?, ?, ?)",
-        [args.name, args.age, args.phone, args.street, args.city]
+        "INSERT INTO persons (name, mail, password) VALUES (?, ?, ?)",
+        [args.name, args.mail, args.password]
       );
+
       const [rows] = await pool.query("SELECT * FROM persons WHERE id = ?", [
         result.insertId,
       ]);
       return rows[0];
     },
+
     editPerson: async (_, args) => {
       const [rows] = await pool.query("SELECT * FROM persons WHERE id = ?", [
         args.id,
@@ -103,22 +94,13 @@ const resolvers = {
       const current = rows[0];
       const updated = {
         name: args.name || current.name,
-        age: args.age !== undefined ? args.age : current.age,
-        phone: args.phone || current.phone,
-        street: args.street || current.street,
-        city: args.city || current.city,
+        mail: args.mail || current.mail,
+        password: args.password || current.password,
       };
 
       await pool.query(
-        "UPDATE persons SET name = ?, age = ?, phone = ?, street = ?, city = ? WHERE id = ?",
-        [
-          updated.name,
-          updated.age,
-          updated.phone,
-          updated.street,
-          updated.city,
-          args.id,
-        ]
+        "UPDATE persons SET name = ?, mail = ?, password = ? WHERE id = ?",
+        [updated.name, updated.mail, updated.password, args.id]
       );
 
       const [updatedRow] = await pool.query(
@@ -127,6 +109,7 @@ const resolvers = {
       );
       return updatedRow[0];
     },
+
     deletePerson: async (_, { id }) => {
       const [rows] = await pool.query("SELECT * FROM persons WHERE id = ?", [
         id,
@@ -136,34 +119,26 @@ const resolvers = {
       await pool.query("DELETE FROM persons WHERE id = ?", [id]);
       return rows[0];
     },
+
     deleteAllPersons: async () => {
       const [rows] = await pool.query("SELECT * FROM persons");
       await pool.query("DELETE FROM persons");
       return rows;
     },
   },
-  Person: {
-    address: (root) => ({
-      street: root.street,
-      city: root.city,
-    }),
-    canDrink: (root) => root.age >= 18,
-  },
 };
 
-// --- Iniciar Apollo Server ---
-async function startApolloServer() {
-  const server = new ApolloServer({ typeDefs, resolvers });
+const server = new ApolloServer({
+  typeDefs,
+  resolvers,
+});
+
+async function startServer() {
   await server.start();
   server.applyMiddleware({ app });
-
-  const PORT = 3000;
-  app.listen(PORT, () => {
-    console.log(`🚀 Servidor Express en http://localhost:${PORT}`);
-    console.log(
-      `🔧 GraphQL listo en http://localhost:${PORT}${server.graphqlPath}`
-    );
-  });
+  app.listen({ port: 4000 }, () =>
+    console.log(`Server ready at http://localhost:4000${server.graphqlPath}`)
+  );
 }
 
-startApolloServer();
+startServer();
