@@ -1,0 +1,51 @@
+# Node modules
+node_modules/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment variables
+.env
+
+# IDEs y editores
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Archivos generados por nodemon
+nodemon.json
+
+# Archivos de base de datos locales (si usas archivos .sqlite, por ejemplo)
+*.sqlite
+*.sqlite3
+
+# Dependencias instaladas globalmente (por si usas package-lock)
+package-lock.json
+
+# Directorio de producción (si lo tienes)
+dist/
+build/
+
+# Cualquier archivo temporal o backup
+*.tmp
+*.bak
+*.swp
+*.lock
+
+# Archivos de cobertura de tests
+coverage/
+
+# Archivos de configuración local o secretos (si existen)
+local.env
+secret.env
+
