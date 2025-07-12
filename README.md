@@ -53,13 +53,13 @@ CREATE TABLE persons (
 
 ```js
 const pool = mysql.createPool({
-  host: 'localhost',
-  user: 'root',
-  password: '',       // Cambia si tenés contraseña
-  database: 'testdb', // Cambia al nombre de tu DB
+  host: "localhost",
+  user: "root",
+  password: "", // Cambia si tenés contraseña
+  database: "testdb", // Cambia al nombre de tu DB
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
 });
 ```
 
@@ -109,9 +109,21 @@ query {
 
 ```graphql
 mutation {
-  addPerson(name: "Charlie", age: 22) {
+  addPerson(
+    name: "Carlos Pérez"
+    age: 28
+    phone: "099-123-456"
+    street: "Av. Libertador 123"
+    city: "Montevideo"
+  ) {
     id
     name
+    age
+    canDrink
+    address {
+      street
+      city
+    }
   }
 }
 ```
